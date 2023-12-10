@@ -4,14 +4,58 @@ import (
 	"strings"
 )
 
-type RomanNumeral struct {
-	Value  int
+func ConvertToArabic(roman string) (total uint16) {
+
+	for _, symbols := range windowedRoman(roman).Symbols() {
+		// fmt.Println(string(symbols))
+
+		total += allRomanNumerals.ValueOf(symbols...)
+	}
+	return
+}
+
+func ConvertToRoman(arabic uint16) string {
+	var result strings.Builder
+
+	for _, numeral := range allRomanNumerals {
+		for arabic >= numeral.Value {
+			result.WriteString(numeral.Symbol)
+			arabic -= numeral.Value
+		}
+	}
+
+	return result.String()
+}
+
+type romanNumeral struct {
+	Value  uint16
 	Symbol string
 }
 
-type RomanNumerals []RomanNumeral
+type romanNumerals []romanNumeral
 
-var allRomanNumerals = RomanNumerals{
+func (r romanNumerals) ValueOf(symbols ...byte) uint16 {
+	symbol := string(symbols)
+	for _, s := range r {
+		if s.Symbol == symbol {
+			return s.Value
+		}
+	}
+
+	return 0
+}
+
+func (r romanNumerals) Exists(symbols ...byte) bool {
+	symbol := string(symbols)
+	for _, s := range r {
+		if s.Symbol == symbol {
+			return true
+		}
+	}
+	return false
+}
+
+var allRomanNumerals = romanNumerals{
 	{1000, "M"},
 	{900, "CM"},
 	{500, "D"},
@@ -27,58 +71,23 @@ var allRomanNumerals = RomanNumerals{
 	{1, "I"},
 }
 
-func (r RomanNumerals) ValueOf(symbol string) int {
-	for _, s := range r {
-		if s.Symbol == symbol {
-			return s.Value
-		}
-	}
+type windowedRoman string
 
-	return 0
-}
+func (w windowedRoman) Symbols() (symbols [][]byte) {
+	for i := 0; i < len(w); i++ {
+		symbol := w[i]
+		notAtEnd := i+1 < len(w)
 
-func ConvertToRoman(arabic int) string {
-
-	var result strings.Builder
-
-	for _, numeral := range allRomanNumerals {
-		for arabic >= numeral.Value {
-			result.WriteString(numeral.Symbol)
-			arabic -= numeral.Value
-		}
-	}
-
-	return result.String()
-}
-
-func ConvertToArabic(roman string) int {
-	total := 0
-
-	for i := 0; i < len(roman); i++ {
-		symbol := roman[i]
-
-		if couldBeSubtractive(i, symbol, roman) {
-			nextSymbol := roman[i+1]
-
-			// build the two character string
-			potentialNumber := string([]byte{symbol, nextSymbol})
-
-			// get the value of the two character string
-			value := allRomanNumerals.ValueOf(potentialNumber)
-
-			if value != 0 {
-				total += value
-				i++ // move past this character too for the next loop
-			} else {
-				total++
-			}
+		if notAtEnd && isSubtractive(symbol) && allRomanNumerals.Exists(symbol, w[i+1]) {
+			symbols = append(symbols, []byte{symbol, w[i+1]})
+			i++
 		} else {
-			total++
+			symbols = append(symbols, []byte{symbol})
 		}
 	}
-	return total
+	return
 }
 
-func couldBeSubtractive(index int, currentSymbol uint8, roman string) bool {
-	return index+1 < len(roman) && currentSymbol == 'I'
+func isSubtractive(symbol uint8) bool {
+	return symbol == 'I' || symbol == 'X' || symbol == 'C'
 }
